@@ -17,7 +17,12 @@
         </nav>
 
         <div class="nav-actions">
-          <button class="btn-login" @click="showLogin = true">登录 / 注册</button>
+          <div v-if="isLoggedIn" class="auth-chip" :title="authDisplayName || '已登录'">
+            <SvgIcon name="user" :size="14" />
+            <span>{{ authDisplayName || '已登录' }}</span>
+          </div>
+          <button v-if="isLoggedIn" class="btn-logout" type="button" @click="handleLogout">退出</button>
+          <button v-else class="btn-login" @click="showLogin = true">登录 / 注册</button>
           <button
             class="btn-theme"
             type="button"
@@ -47,7 +52,14 @@
           <router-link to="/services" @click="menuOpen = false">服务项目</router-link>
           <router-link to="/products" @click="menuOpen = false">自研产品</router-link>
           <router-link to="/contact" @click="menuOpen = false">联系方式</router-link>
-          <button class="btn-login-mobile" @click="showLogin = true; menuOpen = false">登录 / 注册</button>
+          <div v-if="isLoggedIn" class="mobile-auth-state">
+            <div class="auth-chip mobile" :title="authDisplayName || '已登录'">
+              <SvgIcon name="user" :size="14" />
+              <span>{{ authDisplayName || '已登录' }}</span>
+            </div>
+            <button class="btn-logout-mobile" type="button" @click="handleLogout">退出登录</button>
+          </div>
+          <button v-else class="btn-login-mobile" @click="showLogin = true; menuOpen = false">登录 / 注册</button>
         </div>
       </transition>
 
@@ -129,6 +141,15 @@
             </div>
           </div>
           <div class="field">
+            <label>头像</label>
+            <input v-model="registerForm.avatar" type="url" placeholder="请输入头像图片URL（可选）" />
+            <div class="avatar-preview avatar-url-preview">
+              <img v-if="registerAvatarPreview" :src="registerAvatarPreview" alt="头像预览" />
+              <span v-else>熠</span>
+            </div>
+            <p class="avatar-hint">接口文档里头像字段是 URL；如果不填，会使用默认头像地址。</p>
+          </div>
+          <div class="field">
             <label>验证码</label>
             <input v-model="registerForm.verifyCode" type="text" placeholder="请输入短信验证码" required />
           </div>
@@ -164,9 +185,108 @@ const route = useRoute()
 let systemThemeMedia = null
 
 const loginForm = ref({ login: '', password: '' })
-const registerForm = ref({ username: '', password: '', phone: '', verifyCode: '' })
+const registerForm = ref({ username: '', password: '', phone: '', verifyCode: '', avatar: 'http://dummyimage.com/100x100' })
+const authToken = ref(localStorage.getItem('smartyihui-auth-token') || '')
+const authUser = ref(readStoredAuthUser())
+const registerAvatarPreview = computed(() => registerForm.value.avatar || 'http://dummyimage.com/100x100')
 
 const SSO_BASE = '/api/sso'
+
+const isLoggedIn = computed(() => Boolean(authToken.value || authUser.value))
+
+const authDisplayName = computed(() => {
+  const user = authUser.value
+  if (!user) return ''
+  return user.username || user.login || user.phone || user.name || ''
+})
+
+if (authToken.value) {
+  axios.defaults.headers.common.Authorization = authToken.value
+}
+
+function readStoredAuthUser() {
+  try {
+    const rawUser = localStorage.getItem('smartyihui-auth-user')
+    return rawUser ? JSON.parse(rawUser) : null
+  } catch {
+    localStorage.removeItem('smartyihui-auth-user')
+    return null
+  }
+}
+
+function getAuthData(res) {
+  const responseData = res?.data || {}
+  return responseData.data || responseData.result || responseData.user || responseData
+}
+
+function getUserId(source) {
+  const userId = source?.userId || source?.userid || source?.id || source?.user?.userId || source?.user?.id || source?.account?.userId || source?.account?.id
+  const numericId = Number(userId)
+  return Number.isFinite(numericId) && numericId > 0 ? numericId : null
+}
+
+function isAuthSuccess(res) {
+  const responseData = res?.data || {}
+  return res?.status === 200 || responseData.code === 200 || responseData.success === true || responseData.ok === true
+}
+
+function getAuthMessage(res, fallback) {
+  const responseData = res?.data || {}
+  return responseData.msg || responseData.message || responseData.error || fallback
+}
+
+function persistAuthState(authData) {
+  const token = authData?.token || authData?.accessToken || authData?.access_token || authData?.jwt
+  const user = authData?.user || authData?.profile || authData?.account || authData || null
+
+  authToken.value = token || ''
+  authUser.value = user && typeof user === 'object' ? user : null
+
+  if (token) {
+    localStorage.setItem('smartyihui-auth-token', token)
+    axios.defaults.headers.common.Authorization = token
+  }
+
+  if (authUser.value) {
+    localStorage.setItem('smartyihui-auth-user', JSON.stringify(authUser.value))
+  }
+}
+
+async function fetchUserInfo(userId) {
+  if (!userId) return null
+
+  try {
+    const res = await axios.get(`${SSO_BASE}/user/info`, {
+      params: { userId },
+    })
+
+    if (!isAuthSuccess(res)) return null
+
+    const userInfo = getAuthData(res)
+    if (userInfo && typeof userInfo === 'object') {
+      authUser.value = { ...authUser.value, ...userInfo, userId }
+      localStorage.setItem('smartyihui-auth-user', JSON.stringify(authUser.value))
+      return authUser.value
+    }
+  } catch {
+    return null
+  }
+
+  return null
+}
+
+function clearAuthErrorState() {
+  authError.value = ''
+  authSuccess.value = ''
+}
+
+function clearAuthState() {
+  authToken.value = ''
+  authUser.value = null
+  localStorage.removeItem('smartyihui-auth-token')
+  localStorage.removeItem('smartyihui-auth-user')
+  delete axios.defaults.headers.common.Authorization
+}
 
 function handleScroll() {
   const doc = document.documentElement
@@ -238,6 +358,11 @@ onMounted(() => {
   }
   handleScroll()
   window.addEventListener('scroll', handleScroll)
+
+  const storedUserId = getUserId(authUser.value)
+  if (storedUserId) {
+    void fetchUserInfo(storedUserId)
+  }
 })
 onUnmounted(() => {
   window.removeEventListener('scroll', handleScroll)
@@ -254,39 +379,69 @@ watch(() => route.fullPath, () => {
 })
 
 async function handleLogin() {
-  authError.value = ''
+  clearAuthErrorState()
   authLoading.value = true
   try {
-    const res = await axios.post(`${SSO_BASE}/auth/login`, loginForm.value)
-    if (res.data.code === 200) {
-      authSuccess.value = '登录成功！'
+    const res = await axios.post(`${SSO_BASE}/auth/login`, {
+      login: loginForm.value.login,
+      password: loginForm.value.password,
+    })
+    if (isAuthSuccess(res)) {
+      const authData = getAuthData(res)
+      persistAuthState(authData)
+      const userId = getUserId(authData)
+      if (userId) {
+        const userInfo = await fetchUserInfo(userId)
+        if (userInfo) {
+          persistAuthState({ ...authData, user: userInfo })
+        }
+      }
+      if (!authToken.value && !authUser.value) {
+        authUser.value = { login: loginForm.value.login }
+        localStorage.setItem('smartyihui-auth-user', JSON.stringify(authUser.value))
+      }
+      authSuccess.value = getAuthMessage(res, '登录成功！')
       setTimeout(() => { showLogin.value = false; authSuccess.value = '' }, 1200)
     } else {
-      authError.value = res.data.msg || '登录失败，请检查账号密码'
+      authError.value = getAuthMessage(res, '登录失败，请检查账号密码')
     }
   } catch (e) {
-    authError.value = e.response?.data?.msg || '登录失败，请检查账号密码'
+    authError.value = e.response?.data?.msg || e.response?.data?.message || '登录失败，请检查账号密码'
   } finally {
     authLoading.value = false
   }
 }
 
 async function handleRegister() {
-  authError.value = ''
+  clearAuthErrorState()
   authLoading.value = true
   try {
-    const res = await axios.post(`${SSO_BASE}/auth/register`, registerForm.value)
-    if (res.data.code === 200) {
-      authSuccess.value = '注册成功！请登录'
+    const res = await axios.post(`${SSO_BASE}/auth/register`, {
+      username: registerForm.value.username,
+      password: registerForm.value.password,
+      phone: registerForm.value.phone,
+      verifyCode: registerForm.value.verifyCode,
+      avatar: registerForm.value.avatar,
+    })
+    if (isAuthSuccess(res)) {
+      authSuccess.value = getAuthMessage(res, '注册成功！请登录')
       authTab.value = 'login'
     } else {
-      authError.value = res.data.msg || '注册失败，请稍后重试'
+      authError.value = getAuthMessage(res, '注册失败，请稍后重试')
     }
   } catch (e) {
-    authError.value = e.response?.data?.msg || '注册失败，请稍后重试'
+    authError.value = e.response?.data?.msg || e.response?.data?.message || '注册失败，请稍后重试'
   } finally {
     authLoading.value = false
   }
+}
+
+function handleLogout() {
+  clearAuthState()
+  showLogin.value = false
+  menuOpen.value = false
+  authTab.value = 'login'
+  clearAuthErrorState()
 }
 
 async function sendSms() {
@@ -299,17 +454,17 @@ async function sendSms() {
     `${SSO_BASE}/auth/send/phone/verify-code/register`,
     { phone: registerForm.value.phone }
     )
-    if (res.data.code === 200) {
+    if (isAuthSuccess(res)) {
       smsCooldown.value = 60
       const timer = setInterval(() => {
         smsCooldown.value--
         if (smsCooldown.value <= 0) clearInterval(timer)
       }, 1000)
     } else {
-      authError.value = res.data.msg || '发送失败'
+      authError.value = getAuthMessage(res, '发送失败')
     }
   } catch (e) {
-    authError.value = e.response?.data?.msg || '发送失败，请稍后重试'
+    authError.value = e.response?.data?.msg || e.response?.data?.message || '发送失败，请稍后重试'
   }
 }
 </script>
@@ -381,6 +536,24 @@ main { flex: 1; }
   transform: scaleX(1);
 }
 .nav-actions { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+.auth-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.86);
+  color: var(--ink-soft);
+  font-size: 13px;
+  font-weight: 600;
+  max-width: 220px;
+}
+.auth-chip span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .btn-login {
   background: linear-gradient(135deg, var(--gold) 0%, var(--gold-lt) 100%); color: #fff;
   border: none; cursor: pointer;
@@ -392,6 +565,23 @@ main { flex: 1; }
 }
 .btn-login:hover { transform: translateY(-2px); filter: saturate(1.08); box-shadow: 0 14px 24px rgba(200, 151, 58, 0.3); }
 .btn-login:active { transform: translateY(0); }
+.btn-logout {
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.82);
+  color: var(--ink-soft);
+  cursor: pointer;
+  padding: 9px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+.btn-logout:hover {
+  background: var(--gold-bg);
+  border-color: rgba(200,151,58,0.45);
+  transform: translateY(-1px);
+}
 .btn-theme {
   width: 38px;
   height: 38px;
@@ -433,6 +623,18 @@ main { flex: 1; }
   font-size: 16px; font-weight: 500;
 }
 .mobile-menu a:hover { background: var(--gold-bg); color: var(--gold); }
+.mobile-auth-state {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 6px 16px 0;
+}
+.auth-chip.mobile {
+  width: 100%;
+  max-width: none;
+  justify-content: center;
+  background: rgba(255,255,255,0.94);
+}
 .btn-login-mobile {
   margin-top: 8px; background: linear-gradient(135deg, var(--gold) 0%, var(--gold-lt) 100%); color: #fff;
   border: none; cursor: pointer;
@@ -440,6 +642,17 @@ main { flex: 1; }
   font-size: 15px; font-weight: 600; font-family: inherit;
 }
 .btn-login-mobile:active { transform: translateY(1px); }
+.btn-logout-mobile {
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.88);
+  color: var(--ink-soft);
+  cursor: pointer;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: inherit;
+}
 
 .scroll-progress {
   position: absolute;
@@ -537,6 +750,35 @@ main { flex: 1; }
 .field input:focus { border-color: var(--gold); }
 .phone-row { display: flex; gap: 8px; }
 .phone-row input { flex: 1; }
+.avatar-preview {
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+  overflow: hidden;
+  margin-top: 10px;
+  border: 1px solid rgba(200,151,58,0.28);
+  background: linear-gradient(135deg, #fdf6e8 0%, #fff 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--gold);
+  font-family: 'Noto Serif SC', serif;
+  font-size: 22px;
+  font-weight: 700;
+}
+.avatar-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.avatar-hint {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--ink-mute);
+}
+.avatar-url-preview {
+  margin-top: 10px;
+}
 .btn-sms {
   padding: 0 14px; border-radius: 10px;
   border: 1.5px solid var(--gold); color: var(--gold);
