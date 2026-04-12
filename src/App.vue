@@ -142,25 +142,26 @@
               </button>
             </div>
           </div>
-          <div class="field">
+          <div class="field field-avatar">
             <label>头像</label>
-            <div class="avatar-upload-row">
-              <input
-                ref="avatarInput"
-                class="avatar-file-input"
-                type="file"
-                accept="image/*"
-                @change="handleAvatarFileChange"
-              />
-              <button type="button" class="btn-avatar-upload" :disabled="avatarUploading" @click="avatarInput?.click()">
-                {{ avatarUploading ? '上传中...' : '上传本地头像' }}
-              </button>
+            <div class="avatar-upload-panel">
+              <div class="avatar-upload-row">
+                <input
+                  ref="avatarInput"
+                  class="avatar-file-input"
+                  type="file"
+                  accept="image/*"
+                  @change="handleAvatarFileChange"
+                />
+                <button type="button" class="btn-avatar-upload" :disabled="avatarUploading" @click="avatarInput?.click()">
+                  {{ avatarUploading ? '上传中...' : '上传本地头像' }}
+                </button>
+              </div>
+              <div class="avatar-preview avatar-url-preview">
+                <img v-if="registerAvatarPreview" :src="registerAvatarPreview" alt="头像预览" />
+                <span v-else>熠</span>
+              </div>
             </div>
-            <div class="avatar-preview avatar-url-preview">
-              <img v-if="registerAvatarPreview" :src="registerAvatarPreview" alt="头像预览" />
-              <span v-else>熠</span>
-            </div>
-            <p class="avatar-hint">头像将通过上传接口获取 URL 后自动回填，不需要手动输入。</p>
           </div>
           <div class="field">
             <label>验证码</label>
@@ -921,55 +922,72 @@ main { flex: 1; }
 .field input:focus { border-color: var(--gold); }
 .phone-row { display: flex; gap: 8px; }
 .phone-row input { flex: 1; }
+.field-avatar {
+  gap: 8px;
+}
+.avatar-upload-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border: 1px solid rgba(200,151,58,0.2);
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(248,239,220,0.7) 0%, rgba(255,255,255,0.96) 100%);
+  padding: 12px;
+}
 .avatar-upload-row {
   display: flex;
   align-items: center;
+  flex: 1;
 }
 .avatar-file-input {
   display: none;
 }
 .btn-avatar-upload {
   border: 1.5px dashed var(--gold);
-  background: var(--gold-bg);
+  background: rgba(248,239,220,0.85);
   color: var(--gold);
-  border-radius: 10px;
-  padding: 10px 14px;
+  border-radius: 12px;
+  padding: 11px 16px;
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
+  width: 100%;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.btn-avatar-upload:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 14px rgba(200,151,58,0.18);
+  border-color: rgba(200,151,58,0.7);
 }
 .btn-avatar-upload:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 .avatar-preview {
-  width: 64px;
-  height: 64px;
-  border-radius: 18px;
+  width: 72px;
+  height: 72px;
+  border-radius: 20px;
   overflow: hidden;
-  margin-top: 10px;
-  border: 1px solid rgba(200,151,58,0.28);
+  margin-top: 0;
+  border: 1px solid rgba(200,151,58,0.3);
   background: linear-gradient(135deg, #fdf6e8 0%, #fff 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--gold);
   font-family: 'Noto Serif SC', serif;
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 700;
+  flex-shrink: 0;
 }
 .avatar-preview img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
-.avatar-hint {
-  margin-top: 6px;
-  font-size: 12px;
-  color: var(--ink-mute);
-}
 .avatar-url-preview {
-  margin-top: 10px;
+  margin-top: 0;
 }
 .btn-sms {
   padding: 0 14px; border-radius: 10px;
@@ -1047,6 +1065,13 @@ body.dark-theme .modal-tabs button.active {
 body.dark-theme .modal-close:hover {
   background: #1c2738;
 }
+body.dark-theme .avatar-upload-panel {
+  border-color: rgba(212, 172, 102, 0.34);
+  background: linear-gradient(135deg, rgba(45, 35, 19, 0.72) 0%, rgba(22, 29, 41, 0.88) 100%);
+}
+body.dark-theme .btn-avatar-upload {
+  background: rgba(212, 172, 102, 0.14);
+}
 
 @media (max-width: 768px) {
   .nav-links { display: none; }
@@ -1061,6 +1086,16 @@ body.dark-theme .modal-close:hover {
   }
   .modal-overlay { backdrop-filter: none; }
   .modal-box { box-shadow: 0 14px 28px rgba(13,17,23,0.18); }
+  .avatar-upload-panel {
+    gap: 10px;
+    padding: 10px;
+  }
+  .avatar-preview {
+    width: 62px;
+    height: 62px;
+    border-radius: 16px;
+    font-size: 21px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
