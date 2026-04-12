@@ -87,6 +87,8 @@
       </div>
     </footer>
 
+    <ChatWidget />
+
     <!-- 登录/注册弹窗 -->
     <div
       class="modal-overlay"
@@ -210,6 +212,7 @@ import { ref, onMounted, onUnmounted, watch, computed } from 'vue'
 import axios from 'axios'
 import { useRoute } from 'vue-router'
 import SvgIcon from '@/components/SvgIcon.vue'
+import ChatWidget from '@/components/ChatWidget.vue'
 
 const isScrolled = ref(false)
 const menuOpen = ref(false)
