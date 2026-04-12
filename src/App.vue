@@ -103,6 +103,7 @@
         <div class="modal-tabs" id="modal-title">
           <button :class="{ active: authTab === 'login' }" @click="authTab = 'login'">登录</button>
           <button :class="{ active: authTab === 'register' }" @click="authTab = 'register'">注册</button>
+          <button :class="{ active: authTab === 'reset' }" @click="authTab = 'reset'">重置密码</button>
         </div>
 
         <!-- 登录 -->
@@ -118,11 +119,12 @@
           <button type="submit" class="btn-submit" :disabled="authLoading">
             {{ authLoading ? '登录中...' : '登 录' }}
           </button>
+          <button type="button" class="btn-link" @click="authTab = 'reset'">忘记密码？去重置</button>
           <p v-if="authError" class="auth-error">{{ authError }}</p>
         </form>
 
         <!-- 注册 -->
-        <form v-else class="auth-form" @submit.prevent="handleRegister">
+        <form v-else-if="authTab === 'register'" class="auth-form" @submit.prevent="handleRegister">
           <div class="field">
             <label>用户名</label>
             <input v-model="registerForm.username" type="text" placeholder="请输入用户名" required />
@@ -142,12 +144,23 @@
           </div>
           <div class="field">
             <label>头像</label>
-            <input v-model="registerForm.avatar" type="url" placeholder="请输入头像图片URL（可选）" />
+            <div class="avatar-upload-row">
+              <input
+                ref="avatarInput"
+                class="avatar-file-input"
+                type="file"
+                accept="image/*"
+                @change="handleAvatarFileChange"
+              />
+              <button type="button" class="btn-avatar-upload" :disabled="avatarUploading" @click="avatarInput?.click()">
+                {{ avatarUploading ? '上传中...' : '上传本地头像' }}
+              </button>
+            </div>
             <div class="avatar-preview avatar-url-preview">
               <img v-if="registerAvatarPreview" :src="registerAvatarPreview" alt="头像预览" />
               <span v-else>熠</span>
             </div>
-            <p class="avatar-hint">接口文档里头像字段是 URL；如果不填，会使用默认头像地址。</p>
+            <p class="avatar-hint">头像将通过上传接口获取 URL 后自动回填，不需要手动输入。</p>
           </div>
           <div class="field">
             <label>验证码</label>
@@ -156,6 +169,33 @@
           <button type="submit" class="btn-submit" :disabled="authLoading">
             {{ authLoading ? '注册中...' : '注 册' }}
           </button>
+          <p v-if="authError" class="auth-error">{{ authError }}</p>
+          <p v-if="authSuccess" class="auth-success">{{ authSuccess }}</p>
+        </form>
+
+        <!-- 重置密码 -->
+        <form v-else class="auth-form" @submit.prevent="handleResetPassword">
+          <div class="field">
+            <label>手机号</label>
+            <input v-model="resetForm.phone" type="tel" placeholder="请输入注册手机号" required />
+          </div>
+          <div class="field">
+            <label>验证码</label>
+            <div class="phone-row">
+              <input v-model="resetForm.verifyCode" type="text" placeholder="请输入短信验证码" required />
+              <button type="button" class="btn-sms" @click="sendResetSms" :disabled="resetSmsCooldown > 0">
+                {{ resetSmsCooldown > 0 ? `${resetSmsCooldown}s` : '获取验证码' }}
+              </button>
+            </div>
+          </div>
+          <div class="field">
+            <label>新密码</label>
+            <input v-model="resetForm.newPassword" type="password" placeholder="请输入新密码" required />
+          </div>
+          <button type="submit" class="btn-submit" :disabled="authLoading">
+            {{ authLoading ? '提交中...' : '确认重置' }}
+          </button>
+          <button type="button" class="btn-link" @click="authTab = 'login'">返回登录</button>
           <p v-if="authError" class="auth-error">{{ authError }}</p>
           <p v-if="authSuccess" class="auth-success">{{ authSuccess }}</p>
         </form>
@@ -178,6 +218,7 @@ const authLoading = ref(false)
 const authError = ref('')
 const authSuccess = ref('')
 const smsCooldown = ref(0)
+const resetSmsCooldown = ref(0)
 const themeMode = ref('system')
 const resolvedTheme = ref('light')
 const scrollProgress = ref(0)
@@ -186,11 +227,17 @@ let systemThemeMedia = null
 
 const loginForm = ref({ login: '', password: '' })
 const registerForm = ref({ username: '', password: '', phone: '', verifyCode: '', avatar: 'http://dummyimage.com/100x100' })
+const resetForm = ref({ phone: '', verifyCode: '', newPassword: '' })
 const authToken = ref(localStorage.getItem('smartyihui-auth-token') || '')
 const authUser = ref(readStoredAuthUser())
+const avatarInput = ref(null)
+const avatarUploading = ref(false)
 const registerAvatarPreview = computed(() => registerForm.value.avatar || 'http://dummyimage.com/100x100')
 
 const SSO_BASE = '/api/sso'
+const SERVICE_BASE = '/api/service'
+const RESET_PASSWORD_PATH = import.meta.env.VITE_SSO_RESET_PASSWORD_PATH || '/auth/reset-password'
+const LOGOUT_PATH = import.meta.env.VITE_SSO_LOGOUT_PATH || '/auth/logout'
 
 const isLoggedIn = computed(() => Boolean(authToken.value || authUser.value))
 
@@ -233,6 +280,20 @@ function isAuthSuccess(res) {
 function getAuthMessage(res, fallback) {
   const responseData = res?.data || {}
   return responseData.msg || responseData.message || responseData.error || fallback
+}
+
+function startCountdown(targetRef, seconds = 60) {
+  targetRef.value = seconds
+  const timer = setInterval(() => {
+    targetRef.value--
+    if (targetRef.value <= 0) clearInterval(timer)
+  }, 1000)
+}
+
+function resolveUploadUrl(payload) {
+  if (!payload) return ''
+  if (typeof payload === 'string') return payload
+  return payload.url || payload.path || payload.fileUrl || payload.filePath || payload.data || ''
 }
 
 function persistAuthState(authData) {
@@ -436,12 +497,112 @@ async function handleRegister() {
   }
 }
 
-function handleLogout() {
+async function handleLogout() {
+  clearAuthErrorState()
+  try {
+    const res = await axios.post(`${SSO_BASE}${LOGOUT_PATH}`)
+    if (!isAuthSuccess(res)) {
+      authError.value = getAuthMessage(res, '登出失败，请稍后重试')
+      return
+    }
+    authSuccess.value = getAuthMessage(res, '已退出登录')
+  } catch (e) {
+    authError.value = e.response?.data?.msg || e.response?.data?.message || '登出失败，请稍后重试'
+    return
+  }
+
   clearAuthState()
   showLogin.value = false
   menuOpen.value = false
   authTab.value = 'login'
+}
+
+async function handleAvatarFileChange(event) {
+  const file = event.target?.files?.[0]
+  if (!file) return
+
+  const formData = new FormData()
+  formData.append('file', file)
+  avatarUploading.value = true
+  authError.value = ''
+
+  try {
+    const res = await axios.post(`${SERVICE_BASE}/common/upload`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+
+    if (!isAuthSuccess(res)) {
+      authError.value = getAuthMessage(res, '头像上传失败，请稍后重试')
+      return
+    }
+
+    const uploadUrl = resolveUploadUrl(getAuthData(res))
+    if (!uploadUrl) {
+      authError.value = '头像上传成功，但未返回可用URL'
+      return
+    }
+
+    registerForm.value.avatar = uploadUrl
+    authSuccess.value = '头像上传成功'
+  } catch (e) {
+    authError.value = e.response?.data?.msg || e.response?.data?.message || '头像上传失败，请稍后重试'
+  } finally {
+    avatarUploading.value = false
+    if (event?.target) event.target.value = ''
+  }
+}
+
+async function sendResetSms() {
+  if (!resetForm.value.phone) {
+    authError.value = '请先填写手机号'
+    return
+  }
+
+  try {
+    const res = await axios.post(`${SSO_BASE}/auth/send/phone/verify-code/register`, {
+      phone: resetForm.value.phone,
+    })
+    if (isAuthSuccess(res)) {
+      startCountdown(resetSmsCooldown)
+      authSuccess.value = '验证码已发送'
+    } else {
+      authError.value = getAuthMessage(res, '发送失败')
+    }
+  } catch (e) {
+    authError.value = e.response?.data?.msg || e.response?.data?.message || '发送失败，请稍后重试'
+  }
+}
+
+async function handleResetPassword() {
   clearAuthErrorState()
+  authLoading.value = true
+  try {
+    const payload = new URLSearchParams({
+      phone: resetForm.value.phone,
+      verifyCode: resetForm.value.verifyCode,
+      password: resetForm.value.newPassword,
+    })
+
+    const res = await axios.put(`${SSO_BASE}${RESET_PASSWORD_PATH}`, payload, {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+    })
+    if (isAuthSuccess(res)) {
+      authSuccess.value = getAuthMessage(res, '密码已重置，请重新登录')
+      loginForm.value.login = resetForm.value.phone
+      loginForm.value.password = ''
+      authTab.value = 'login'
+      resetForm.value.verifyCode = ''
+      resetForm.value.newPassword = ''
+    } else {
+      authError.value = getAuthMessage(res, '重置密码失败，请稍后重试')
+    }
+  } catch (e) {
+    authError.value = e.response?.data?.msg || e.response?.data?.message || '重置密码失败，请稍后重试'
+  } finally {
+    authLoading.value = false
+  }
 }
 
 async function sendSms() {
@@ -455,11 +616,7 @@ async function sendSms() {
     { phone: registerForm.value.phone }
     )
     if (isAuthSuccess(res)) {
-      smsCooldown.value = 60
-      const timer = setInterval(() => {
-        smsCooldown.value--
-        if (smsCooldown.value <= 0) clearInterval(timer)
-      }, 1000)
+      startCountdown(smsCooldown)
     } else {
       authError.value = getAuthMessage(res, '发送失败')
     }
@@ -737,6 +894,20 @@ main { flex: 1; }
   box-shadow: 0 1px 4px rgba(0,0,0,0.1);
 }
 
+.btn-link {
+  background: transparent;
+  border: none;
+  color: var(--gold);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+}
+
+.btn-link:hover {
+  text-decoration: underline;
+}
+
 .auth-form { display: flex; flex-direction: column; gap: 18px; }
 .field { display: flex; flex-direction: column; gap: 6px; }
 .field label { font-size: 14px; font-weight: 600; color: var(--ink-soft); }
@@ -750,6 +921,27 @@ main { flex: 1; }
 .field input:focus { border-color: var(--gold); }
 .phone-row { display: flex; gap: 8px; }
 .phone-row input { flex: 1; }
+.avatar-upload-row {
+  display: flex;
+  align-items: center;
+}
+.avatar-file-input {
+  display: none;
+}
+.btn-avatar-upload {
+  border: 1.5px dashed var(--gold);
+  background: var(--gold-bg);
+  color: var(--gold);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.btn-avatar-upload:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
 .avatar-preview {
   width: 64px;
   height: 64px;
