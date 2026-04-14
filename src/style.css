@@ -111,6 +111,29 @@ body.dark-theme .btn-outline {
   color: #c3cfdd;
 }
 
+body.dark-theme .home-root .hero-sub {
+  color: #dbe5f2;
+}
+
+body.dark-theme .home-root .hero-points li {
+  color: #eef4fb;
+}
+
+body.dark-theme .home-root .hero-trust-strip span {
+  background: rgba(231, 237, 247, 0.08);
+  border-color: rgba(231, 237, 247, 0.16);
+  color: #eef4fb;
+}
+
+body.dark-theme .home-root .metric {
+  background: linear-gradient(180deg, rgba(18, 27, 40, 0.96), rgba(13, 19, 31, 0.9));
+  border-color: rgba(231, 237, 247, 0.12);
+}
+
+body.dark-theme .home-root .metric-label {
+  color: #dbe5f2;
+}
+
 body.dark-theme .about-values,
 body.dark-theme .about-certs,
 body.dark-theme .contact-main,
