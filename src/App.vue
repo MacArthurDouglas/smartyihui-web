@@ -209,7 +209,7 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted, watch, computed } from 'vue'
-import axios from 'axios'
+import { apiClient, onUnauthorized } from '@/lib/api.js'
 import { useRoute } from 'vue-router'
 import SvgIcon from '@/components/SvgIcon.vue'
 import ChatWidget from '@/components/ChatWidget.vue'
@@ -251,10 +251,6 @@ const authDisplayName = computed(() => {
   return user.username || user.login || user.phone || user.name || ''
 })
 
-if (authToken.value) {
-  axios.defaults.headers.common.Authorization = authToken.value
-}
-
 function readStoredAuthUser() {
   try {
     const rawUser = localStorage.getItem('smartyihui-auth-user')
@@ -274,11 +270,6 @@ function getUserId(source) {
   const userId = source?.userId || source?.userid || source?.id || source?.user?.userId || source?.user?.id || source?.account?.userId || source?.account?.id
   const numericId = Number(userId)
   return Number.isFinite(numericId) && numericId > 0 ? numericId : null
-}
-
-function isAuthSuccess(res) {
-  const responseData = res?.data || {}
-  return res?.status === 200 || responseData.code === 200 || responseData.success === true || responseData.ok === true
 }
 
 function getAuthMessage(res, fallback) {
@@ -309,7 +300,6 @@ function persistAuthState(authData) {
 
   if (token) {
     localStorage.setItem('smartyihui-auth-token', token)
-    axios.defaults.headers.common.Authorization = token
   }
 
   if (authUser.value) {
@@ -321,11 +311,9 @@ async function fetchUserInfo(userId) {
   if (!userId) return null
 
   try {
-    const res = await axios.get(`${SSO_BASE}/user/info`, {
+    const res = await apiClient.get(`${SSO_BASE}/user/info`, {
       params: { userId },
     })
-
-    if (!isAuthSuccess(res)) return null
 
     const userInfo = getAuthData(res)
     if (userInfo && typeof userInfo === 'object') {
@@ -350,7 +338,6 @@ function clearAuthState() {
   authUser.value = null
   localStorage.removeItem('smartyihui-auth-token')
   localStorage.removeItem('smartyihui-auth-user')
-  delete axios.defaults.headers.common.Authorization
 }
 
 function handleScroll() {
@@ -408,6 +395,12 @@ function handleSystemThemeChange() {
 }
 
 onMounted(() => {
+  onUnauthorized(() => {
+    clearAuthState()
+    authTab.value = 'login'
+    authError.value = '登录已失效，请重新登录'
+    showLogin.value = true
+  })
   systemThemeMedia = window.matchMedia('(prefers-color-scheme: dark)')
   if (typeof systemThemeMedia.addEventListener === 'function') {
     systemThemeMedia.addEventListener('change', handleSystemThemeChange)
@@ -447,31 +440,27 @@ async function handleLogin() {
   clearAuthErrorState()
   authLoading.value = true
   try {
-    const res = await axios.post(`${SSO_BASE}/auth/login`, {
+    const res = await apiClient.post(`${SSO_BASE}/auth/login`, {
       login: loginForm.value.login,
       password: loginForm.value.password,
     })
-    if (isAuthSuccess(res)) {
-      const authData = getAuthData(res)
-      persistAuthState(authData)
-      const userId = getUserId(authData)
-      if (userId) {
-        const userInfo = await fetchUserInfo(userId)
-        if (userInfo) {
-          persistAuthState({ ...authData, user: userInfo })
-        }
+    const authData = getAuthData(res)
+    persistAuthState(authData)
+    const userId = getUserId(authData)
+    if (userId) {
+      const userInfo = await fetchUserInfo(userId)
+      if (userInfo) {
+        persistAuthState({ ...authData, user: userInfo })
       }
-      if (!authToken.value && !authUser.value) {
-        authUser.value = { login: loginForm.value.login }
-        localStorage.setItem('smartyihui-auth-user', JSON.stringify(authUser.value))
-      }
-      authSuccess.value = getAuthMessage(res, '登录成功！')
-      setTimeout(() => { showLogin.value = false; authSuccess.value = '' }, 1200)
-    } else {
-      authError.value = getAuthMessage(res, '登录失败，请检查账号密码')
     }
+    if (!authToken.value && !authUser.value) {
+      authUser.value = { login: loginForm.value.login }
+      localStorage.setItem('smartyihui-auth-user', JSON.stringify(authUser.value))
+    }
+    authSuccess.value = getAuthMessage(res, '登录成功！')
+    setTimeout(() => { showLogin.value = false; authSuccess.value = '' }, 1200)
   } catch (e) {
-    authError.value = e.response?.data?.msg || e.response?.data?.message || '登录失败，请检查账号密码'
+    authError.value = e.message || '登录失败，请检查账号密码'
   } finally {
     authLoading.value = false
   }
@@ -481,21 +470,17 @@ async function handleRegister() {
   clearAuthErrorState()
   authLoading.value = true
   try {
-    const res = await axios.post(`${SSO_BASE}/auth/register`, {
+    await apiClient.post(`${SSO_BASE}/auth/register`, {
       username: registerForm.value.username,
       password: registerForm.value.password,
       phone: registerForm.value.phone,
       verifyCode: registerForm.value.verifyCode,
       avatar: registerForm.value.avatar,
     })
-    if (isAuthSuccess(res)) {
-      authSuccess.value = getAuthMessage(res, '注册成功！请登录')
-      authTab.value = 'login'
-    } else {
-      authError.value = getAuthMessage(res, '注册失败，请稍后重试')
-    }
+    authSuccess.value = '注册成功！请登录'
+    authTab.value = 'login'
   } catch (e) {
-    authError.value = e.response?.data?.msg || e.response?.data?.message || '注册失败，请稍后重试'
+    authError.value = e.message || '注册失败，请稍后重试'
   } finally {
     authLoading.value = false
   }
@@ -504,17 +489,10 @@ async function handleRegister() {
 async function handleLogout() {
   clearAuthErrorState()
   try {
-    const res = await axios.post(`${SSO_BASE}${LOGOUT_PATH}`)
-    if (!isAuthSuccess(res)) {
-      authError.value = getAuthMessage(res, '登出失败，请稍后重试')
-      return
-    }
-    authSuccess.value = getAuthMessage(res, '已退出登录')
-  } catch (e) {
-    authError.value = e.response?.data?.msg || e.response?.data?.message || '登出失败，请稍后重试'
-    return
+    await apiClient.post(`${SSO_BASE}${LOGOUT_PATH}`)
+  } catch {
+    // always clear local auth state even if server logout fails
   }
-
   clearAuthState()
   showLogin.value = false
   menuOpen.value = false
@@ -531,14 +509,9 @@ async function handleAvatarFileChange(event) {
   authError.value = ''
 
   try {
-    const res = await axios.post(`${SERVICE_BASE}/common/upload`, formData, {
+    const res = await apiClient.post(`${SERVICE_BASE}/common/upload`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
-
-    if (!isAuthSuccess(res)) {
-      authError.value = getAuthMessage(res, '头像上传失败，请稍后重试')
-      return
-    }
 
     const uploadUrl = resolveUploadUrl(getAuthData(res))
     if (!uploadUrl) {
@@ -549,7 +522,7 @@ async function handleAvatarFileChange(event) {
     registerForm.value.avatar = uploadUrl
     authSuccess.value = '头像上传成功'
   } catch (e) {
-    authError.value = e.response?.data?.msg || e.response?.data?.message || '头像上传失败，请稍后重试'
+    authError.value = e.message || '头像上传失败，请稍后重试'
   } finally {
     avatarUploading.value = false
     if (event?.target) event.target.value = ''
@@ -563,17 +536,13 @@ async function sendResetSms() {
   }
 
   try {
-    const res = await axios.post(`${SSO_BASE}/auth/send/phone/verify-code/register`, {
+    await apiClient.post(`${SSO_BASE}/auth/send/phone/verify-code/register`, {
       phone: resetForm.value.phone,
     })
-    if (isAuthSuccess(res)) {
-      startCountdown(resetSmsCooldown)
-      authSuccess.value = '验证码已发送'
-    } else {
-      authError.value = getAuthMessage(res, '发送失败')
-    }
+    startCountdown(resetSmsCooldown)
+    authSuccess.value = '验证码已发送'
   } catch (e) {
-    authError.value = e.response?.data?.msg || e.response?.data?.message || '发送失败，请稍后重试'
+    authError.value = e.message || '发送失败，请稍后重试'
   }
 }
 
@@ -587,23 +556,19 @@ async function handleResetPassword() {
       password: resetForm.value.newPassword,
     })
 
-    const res = await axios.put(`${SSO_BASE}${RESET_PASSWORD_PATH}`, payload, {
+    await apiClient.put(`${SSO_BASE}${RESET_PASSWORD_PATH}`, payload, {
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
     })
-    if (isAuthSuccess(res)) {
-      authSuccess.value = getAuthMessage(res, '密码已重置，请重新登录')
-      loginForm.value.login = resetForm.value.phone
-      loginForm.value.password = ''
-      authTab.value = 'login'
-      resetForm.value.verifyCode = ''
-      resetForm.value.newPassword = ''
-    } else {
-      authError.value = getAuthMessage(res, '重置密码失败，请稍后重试')
-    }
+    authSuccess.value = '密码已重置，请重新登录'
+    loginForm.value.login = resetForm.value.phone
+    loginForm.value.password = ''
+    authTab.value = 'login'
+    resetForm.value.verifyCode = ''
+    resetForm.value.newPassword = ''
   } catch (e) {
-    authError.value = e.response?.data?.msg || e.response?.data?.message || '重置密码失败，请稍后重试'
+    authError.value = e.message || '重置密码失败，请稍后重试'
   } finally {
     authLoading.value = false
   }
@@ -615,17 +580,13 @@ async function sendSms() {
     return
   }
   try {
-    const res = await axios.post(
+    await apiClient.post(
     `${SSO_BASE}/auth/send/phone/verify-code/register`,
     { phone: registerForm.value.phone }
     )
-    if (isAuthSuccess(res)) {
-      startCountdown(smsCooldown)
-    } else {
-      authError.value = getAuthMessage(res, '发送失败')
-    }
+    startCountdown(smsCooldown)
   } catch (e) {
-    authError.value = e.response?.data?.msg || e.response?.data?.message || '发送失败，请稍后重试'
+    authError.value = e.message || '发送失败，请稍后重试'
   }
 }
 </script>
