@@ -2,6 +2,9 @@
   <div class="page-top-pad">
     <section class="srv-hero">
       <div class="srv-hero-bg" aria-hidden="true"></div>
+      <div class="srv-hero-photo-bg" aria-hidden="true">
+        <img :src="serviceReviewImage" alt="" />
+      </div>
       <div class="srv-hero-inner">
         <div class="section-tag">服务项目</div>
         <h1 class="srv-hero-title">我们能为您<span class="gold">开发什么</span></h1>
@@ -18,7 +21,13 @@
       :class="{ 'bg-alt': idx % 2 === 1 }">
       <div class="srv-detail-inner" :class="{ reversed: idx % 2 === 1 }">
         <div class="srv-d-visual">
-          <div class="srv-d-icon-bg" :style="`background: ${svc.bgColor}; color: ${svc.iconColor}`">
+          <div v-if="svc.image" class="srv-photo-card">
+            <img :src="svc.image" :alt="svc.imageAlt" loading="lazy" />
+            <div class="srv-photo-chip" :style="`color: ${svc.iconColor}`">
+              <SvgIcon :name="svc.icon" :size="28" />
+            </div>
+          </div>
+          <div v-else class="srv-d-icon-bg" :style="`background: ${svc.bgColor}; color: ${svc.iconColor}`">
             <SvgIcon :name="svc.icon" :size="80" />
           </div>
         </div>
@@ -71,11 +80,17 @@
 
 <script setup>
 import SvgIcon from '@/components/SvgIcon.vue'
+import serviceReviewImage from '@/assets/visuals/service-review.webp'
+import serviceSoftwareImage from '@/assets/visuals/service-software.webp'
+import serviceMiniProgramImage from '@/assets/visuals/service-miniprogram.webp'
+import serviceGameImage from '@/assets/visuals/service-game.webp'
 
 const services = [
   {
     id: 1, icon: 'globe', category: '01 / 网站开发',
     title: '企业官网 & Web应用',
+    image: serviceReviewImage,
+    imageAlt: '开发者和客户一起评审网站原型',
     bgColor: 'linear-gradient(135deg, #dbeafe, #eff6ff)',
     iconColor: '#3b82f6',
     desc: '我们为企业打造专业、美观、高性能的网站，包括企业官网、产品展示站、电商平台、管理后台系统等，响应式设计确保在PC和移动端都有最佳体验。',
@@ -91,6 +106,8 @@ const services = [
   {
     id: 2, icon: 'settings', category: '02 / 软件定制',
     title: '企业软件定制开发',
+    image: serviceSoftwareImage,
+    imageAlt: '企业软件定制开发的仪表盘和流程评审场景',
     bgColor: 'linear-gradient(135deg, #fef3c7, #fdf6e8)',
     iconColor: '#c8973a',
     desc: '根据您的业务需求量身定制软件系统，包括ERP、CRM、OA、数据管理平台等，从需求分析到系统上线，提供全流程技术服务。',
@@ -106,6 +123,8 @@ const services = [
   {
     id: 3, icon: 'smartphone', category: '03 / 微信小程序',
     title: '微信小程序开发',
+    image: serviceMiniProgramImage,
+    imageAlt: '手机小程序和移动端原型设计评审场景',
     bgColor: 'linear-gradient(135deg, #d1fae5, #ecfdf5)',
     iconColor: '#10b981',
     desc: '覆盖电商、预约、打卡、社区等各类场景，帮助您快速触达微信生态内超过10亿的用户，开发周期短，上线成本低。',
@@ -121,6 +140,8 @@ const services = [
   {
     id: 4, icon: 'gamepad', category: '04 / 小游戏开发',
     title: '微信小游戏 & H5游戏',
+    image: serviceGameImage,
+    imageAlt: '电脑和手机展示2D小游戏多端适配画面',
     bgColor: 'linear-gradient(135deg, #ede9fe, #f5f3ff)',
     iconColor: '#8b5cf6',
     desc: '休闲益智、测试类、互动营销等各类小游戏，支持微信小游戏平台上线，内置广告变现，帮助您快速构建用户流量与商业模式。',
@@ -167,6 +188,30 @@ const steps = [
       transparent 8px
     );
   opacity: 0.75;
+}
+.srv-hero-photo-bg {
+  position: absolute;
+  right: 4%;
+  top: 14%;
+  width: min(420px, 34vw);
+  aspect-ratio: 16 / 10;
+  border-radius: 28px;
+  overflow: hidden;
+  opacity: 0.13;
+  transform: rotate(-2deg);
+  pointer-events: none;
+  box-shadow: 0 24px 60px rgba(13,17,23,0.16);
+}
+.srv-hero-photo-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.44), rgba(255,255,255,0.06));
+}
+.srv-hero-photo-bg img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 .srv-hero-inner { max-width: 700px; margin: 0 auto; text-align: center; }
 .srv-hero-inner { position: relative; z-index: 1; }
@@ -215,6 +260,46 @@ const steps = [
   box-shadow: 0 24px 54px rgba(13,17,23,0.1);
   border: 1px solid rgba(255,255,255,0.6);
   transition: transform 0.28s ease, box-shadow 0.28s ease;
+}
+.srv-photo-card {
+  width: min(430px, 100%);
+  aspect-ratio: 16 / 10;
+  border-radius: 24px;
+  overflow: hidden;
+  position: relative;
+  background: #fff;
+  box-shadow: 0 24px 58px rgba(13,17,23,0.12);
+  border: 1px solid rgba(255,255,255,0.75);
+}
+.srv-photo-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.srv-photo-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(13,17,23,0.02), rgba(13,17,23,0.18)),
+    radial-gradient(circle at 14% 12%, rgba(255,255,255,0.28), transparent 34%);
+  pointer-events: none;
+}
+.srv-photo-chip {
+  position: absolute;
+  left: 18px;
+  bottom: 18px;
+  z-index: 1;
+  width: 58px;
+  height: 58px;
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.9);
+  border: 1px solid rgba(255,255,255,0.7);
+  box-shadow: 0 14px 30px rgba(13,17,23,0.12);
+  backdrop-filter: blur(10px);
 }
 .srv-detail-inner:hover .srv-d-icon-bg {
   transform: translateY(-4px) rotate(-1deg);
@@ -348,11 +433,13 @@ const steps = [
   .srv-hero-inner { text-align: left; }
   .srv-hero-tags { justify-content: flex-start; }
   .srv-hero-bg { opacity: 0.5; }
+  .srv-hero-photo-bg { display: none; }
   .proc-step { backdrop-filter: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .srv-hero-bg { display: none; }
+  .srv-hero-photo-bg { display: none; }
   .srv-d-icon-bg,
   .srv-detail-inner:hover .srv-d-icon-bg,
   .btn-primary,

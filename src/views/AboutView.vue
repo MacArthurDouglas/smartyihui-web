@@ -53,10 +53,15 @@
             访问智创空间 →
           </a>
         </div>
-        <div class="story-facts">
-          <div class="fact-card" v-for="f in facts" :key="f.id">
-            <div class="fact-num">{{ f.num }}</div>
-            <div class="fact-lbl">{{ f.label }}</div>
+        <div class="story-proof">
+          <div class="story-photo-card">
+            <img :src="aboutTeamImage" alt="年轻技术团队在工作室协作讨论产品方案" loading="lazy" />
+          </div>
+          <div class="story-facts">
+            <div class="fact-card" v-for="f in facts" :key="f.id">
+              <div class="fact-num">{{ f.num }}</div>
+              <div class="fact-lbl">{{ f.label }}</div>
+            </div>
           </div>
         </div>
       </div>
@@ -85,6 +90,7 @@
 
 <script setup>
 import SvgIcon from '@/components/SvgIcon.vue'
+import aboutTeamImage from '@/assets/visuals/about-team.webp'
 
 const values = [
   { id:1, icon:'rocket', title:'快速交付', desc:'敏捷开发，快速响应，最短时间内将您的想法变为现实' },
@@ -213,6 +219,34 @@ const certs = [
 .story-text { display: flex; flex-direction: column; gap: 14px; }
 .story-text p { color: var(--ink-soft); font-size: 15px; line-height: 1.8; }
 .story-text strong { color: var(--gold); }
+.story-proof {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.story-photo-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 24px;
+  aspect-ratio: 16 / 10;
+  background: #fff;
+  border: 1px solid rgba(232,234,237,0.92);
+  box-shadow: 0 24px 58px rgba(13,17,23,0.1);
+}
+.story-photo-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.story-photo-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(13,17,23,0.02), rgba(13,17,23,0.14)),
+    radial-gradient(circle at 12% 10%, rgba(255,255,255,0.24), transparent 36%);
+  pointer-events: none;
+}
 .story-facts {
   display: grid;
   grid-template-columns: 1fr 1fr;

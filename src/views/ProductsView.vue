@@ -19,7 +19,9 @@
           <div class="prod-card" v-for="p in products" :key="p.id">
 
             <!-- 左侧图标区 -->
-            <div class="prod-visual" :style="`background: ${p.bg}`">
+            <div class="prod-visual" :class="{ 'with-image': p.visual }" :style="p.visual ? '' : `background: ${p.bg}`">
+              <img v-if="p.visual" :src="p.visual" :alt="p.visualAlt" loading="lazy" />
+              <div class="prod-visual-tint" v-if="p.visual" aria-hidden="true"></div>
               <div class="prod-icon-wrap" :style="`color: ${p.color}`">
                 <SvgIcon :name="p.icon" :size="64" />
               </div>
@@ -88,6 +90,7 @@
 
 <script setup>
 import SvgIcon from '@/components/SvgIcon.vue'
+import productGameImage from '@/assets/visuals/product-game.webp'
 
 const products = [
   {
@@ -97,6 +100,8 @@ const products = [
     status: 'beta',
     statusLabel: '内测中',
     icon: 'gamepad',
+    visual: productGameImage,
+    visualAlt: '桌面显示器展示2D多人冒险游戏画面',
     bg: 'linear-gradient(135deg, #ede9fe, #f5f3ff)',
     color: '#8b5cf6',
     desc:
@@ -177,8 +182,30 @@ const products = [
   gap: 20px;
   padding: 40px 24px;
   min-height: 280px;
+  position: relative;
+  overflow: hidden;
+}
+.prod-visual.with-image {
+  align-items: flex-start;
+  justify-content: flex-end;
+}
+.prod-visual > img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.prod-visual-tint {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(13,17,23,0.04) 0%, rgba(13,17,23,0.58) 100%),
+    radial-gradient(circle at 20% 10%, rgba(255,255,255,0.24), transparent 34%);
 }
 .prod-icon-wrap {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -188,8 +215,24 @@ const products = [
   backdrop-filter: blur(8px);
   box-shadow: 0 8px 24px rgba(0,0,0,0.08);
 }
+.with-image .prod-icon-wrap {
+  width: 76px;
+  height: 76px;
+  border-radius: 22px;
+  background: rgba(255,255,255,0.9);
+  box-shadow: 0 14px 30px rgba(13,17,23,0.16);
+}
 .prod-badges {
+  position: relative;
+  z-index: 1;
   display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;
+}
+.with-image .prod-badges {
+  justify-content: flex-start;
+}
+.with-image .badge {
+  background: rgba(255,255,255,0.9);
+  color: #263241;
 }
 .badge {
   padding: 4px 12px; border-radius: 999px;

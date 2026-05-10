@@ -32,10 +32,13 @@
           </div>
 
           <div class="map-placeholder">
-            <div class="map-pin-icon">
-              <SvgIcon name="map-pin" :size="36" />
+            <img :src="contactConsultImage" alt="商务咨询桌面上记录项目需求" loading="lazy" />
+            <div class="map-overlay">
+              <div class="map-pin-icon">
+                <SvgIcon name="map-pin" :size="30" />
+              </div>
+              <p>广州市天河区<br/>中山大道建中路5号</p>
             </div>
-            <p>广州市天河区<br/>中山大道建中路5号</p>
           </div>
         </div>
 
@@ -125,6 +128,7 @@
 import { ref, reactive } from 'vue'
 import SvgIcon from '@/components/SvgIcon.vue'
 import { apiClient } from '@/lib/api'
+import contactConsultImage from '@/assets/visuals/contact-consult.webp'
 
 const form = reactive({ name: '', phone: '', type: '', desc: '' })
 const submitting = ref(false)
@@ -284,17 +288,51 @@ async function handleSubmit() {
 .map-placeholder {
   background: var(--ink);
   border-radius: 16px;
-  padding: 32px;
-  text-align: center;
-  color: rgba(255,255,255,0.7);
+  min-height: 260px;
+  text-align: left;
+  color: rgba(255,255,255,0.86);
+  overflow: hidden;
+  position: relative;
+  border: 1px solid rgba(255,255,255,0.12);
+  box-shadow: 0 18px 44px rgba(13,17,23,0.14);
+}
+.map-placeholder img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.map-placeholder::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(13,17,23,0.08), rgba(13,17,23,0.64)),
+    radial-gradient(circle at 14% 12%, rgba(255,255,255,0.22), transparent 36%);
+}
+.map-overlay {
+  position: absolute;
+  left: 20px;
+  right: 20px;
+  bottom: 20px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 16px;
+  background: rgba(13,17,23,0.72);
+  border: 1px solid rgba(255,255,255,0.16);
+  backdrop-filter: blur(10px);
 }
 .map-pin-icon {
   color: var(--gold-lt);
-  margin-bottom: 12px;
   display: flex;
   justify-content: center;
+  flex-shrink: 0;
 }
-.map-placeholder p { font-size: 14px; line-height: 1.8; color: rgba(255,255,255,0.6); }
+.map-placeholder p { font-size: 14px; line-height: 1.8; color: rgba(255,255,255,0.86); }
 
 .contact-form-wrap {
   background: #fff;

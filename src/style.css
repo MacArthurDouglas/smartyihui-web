@@ -164,6 +164,27 @@ body.dark-theme .coming-soon {
   box-shadow: 0 10px 22px rgba(0, 0, 0, 0.28);
 }
 
+body.dark-theme .home-root .handshake-card,
+body.dark-theme .srv-photo-card,
+body.dark-theme .story-photo-card,
+body.dark-theme .map-placeholder {
+  background: #121b28 !important;
+  border-color: #2f3b50 !important;
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.34);
+}
+
+body.dark-theme .home-root .biz-photo,
+body.dark-theme .srv-photo-card img,
+body.dark-theme .story-photo-card img,
+body.dark-theme .prod-visual.with-image > img,
+body.dark-theme .map-placeholder img {
+  filter: brightness(0.82) saturate(0.92);
+}
+
+body.dark-theme .srv-hero-photo-bg {
+  opacity: 0.09 !important;
+}
+
 body.dark-theme .fact-card,
 body.dark-theme .tech-tag,
 body.dark-theme .srv-tags li,
@@ -227,4 +248,3 @@ body.dark-theme .footer-addr,
 body.dark-theme .footer-copy {
   color: var(--ink-soft) !important;
 }
- 

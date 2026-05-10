@@ -43,35 +43,12 @@
       <div class="hero-visual">
         <div class="handshake-card">
           <div class="hc-img">
-            <!-- 西装男握手 SVG 插图 -->
-            <svg viewBox="0 0 320 280" xmlns="http://www.w3.org/2000/svg" class="biz-svg">
-              <!-- 背景圆 -->
-              <circle cx="160" cy="140" r="120" fill="#fdf6e8" opacity="0.8"/>
-              <!-- 左人 -->
-              <rect x="40" y="100" width="60" height="90" rx="8" fill="#1a2332"/>
-              <rect x="48" y="108" width="44" height="12" rx="3" fill="#c8973a" opacity="0.6"/>
-              <circle cx="70" cy="88" r="22" fill="#f5d5b8"/>
-              <rect x="55" y="82" width="30" height="10" rx="5" fill="#1a2332"/>
-              <!-- 右人 -->
-              <rect x="220" y="100" width="60" height="90" rx="8" fill="#2d4a6e"/>
-              <rect x="228" y="108" width="44" height="12" rx="3" fill="#c8973a" opacity="0.6"/>
-              <circle cx="250" cy="88" r="22" fill="#f5d5b8"/>
-              <rect x="235" y="82" width="30" height="10" rx="5" fill="#2d4a6e"/>
-              <!-- 握手臂 -->
-              <path d="M100 155 Q130 145 160 150 Q190 155 220 145" stroke="#1a2332" stroke-width="18" fill="none" stroke-linecap="round"/>
-              <path d="M100 155 Q130 145 160 150 Q190 155 220 145" stroke="#f5d5b8" stroke-width="10" fill="none" stroke-linecap="round"/>
-              <!-- 握手拳 -->
-              <ellipse cx="160" cy="150" rx="24" ry="16" fill="#f5d5b8"/>
-              <ellipse cx="160" cy="150" rx="24" ry="16" fill="none" stroke="#e8c49a" stroke-width="2"/>
-              <!-- 金色光芒 -->
-              <circle cx="160" cy="150" r="6" fill="#c8973a" opacity="0.9"/>
-              <line x1="160" y1="126" x2="160" y2="118" stroke="#c8973a" stroke-width="2" opacity="0.6"/>
-              <line x1="160" y1="174" x2="160" y2="182" stroke="#c8973a" stroke-width="2" opacity="0.6"/>
-              <line x1="136" y1="150" x2="128" y2="150" stroke="#c8973a" stroke-width="2" opacity="0.6"/>
-              <line x1="184" y1="150" x2="192" y2="150" stroke="#c8973a" stroke-width="2" opacity="0.6"/>
-              <!-- 装饰文字 -->
-              <text x="160" y="220" text-anchor="middle" fill="#c8973a" font-size="13" font-family="serif" font-weight="600">携手共创 · 共赢未来</text>
-            </svg>
+            <img
+              :src="heroHandshakeImage"
+              class="biz-photo"
+              alt="商务合作握手照片"
+              loading="eager"
+            />
           </div>
           <div class="hc-footer">
             <div class="hc-stat"><span class="stat-num">50+</span><span class="stat-lbl">成功案例</span></div>
@@ -169,6 +146,7 @@
 
 <script setup>
 import SvgIcon from '@/components/SvgIcon.vue'
+import heroHandshakeImage from '@/assets/hero-handshake.webp'
 
 const services = [
   {
@@ -398,22 +376,39 @@ const whys = [
 /* Handshake card */
 .handshake-card {
   background: #fff;
-  border-radius: 24px;
-  box-shadow: 0 28px 70px rgba(0,0,0,0.12), 0 0 0 1px var(--border);
+  border-radius: 26px;
+  box-shadow: 0 30px 76px rgba(13,17,23,0.14), 0 0 0 1px rgba(232,234,237,0.9);
   overflow: hidden;
   transform: rotate(-1deg);
   transition: transform 0.35s ease, box-shadow 0.35s ease;
+  position: relative;
 }
 .handshake-card:hover {
   transform: rotate(0deg) translateY(-4px);
   box-shadow: 0 32px 84px rgba(13,17,23,0.16), 0 0 0 1px var(--border);
 }
 .hc-img {
-  padding: 32px;
   background: linear-gradient(135deg, #fdf6e8 0%, #fff8f0 100%);
   display: flex; align-items: center; justify-content: center;
+  aspect-ratio: 16 / 11;
+  overflow: hidden;
+  position: relative;
 }
-.biz-svg { width: 100%; max-width: 300px; }
+.hc-img::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(13,17,23,0) 58%, rgba(13,17,23,0.12) 100%),
+    radial-gradient(circle at 12% 12%, rgba(255,255,255,0.24), transparent 34%);
+  pointer-events: none;
+}
+.biz-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scale(1.015);
+}
 .hc-footer {
   display: flex; align-items: center; justify-content: space-around;
   padding: 20px 24px;
