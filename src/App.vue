@@ -84,6 +84,9 @@
         </div>
         <p class="footer-addr">广州市天河区中山大道建中路5号</p>
         <p class="footer-copy">© 2026 广州熠辉智能科技有限公司. All rights reserved.</p>
+        <p class="footer-icp">
+          <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">粤ICP备2026036041号-1</a>
+        </p>
       </div>
     </footer>
 
@@ -812,6 +815,9 @@ main { flex: 1; }
 }
 .footer-addr { font-size: 14px; }
 .footer-copy { font-size: 13px; opacity: 0.7; }
+.footer-icp { font-size: 12px; color: rgba(255,255,255,0.85); }
+.footer-icp a { color: inherit; text-decoration: none; transition: opacity 0.2s; }
+.footer-icp a:hover { opacity: 0.7; text-decoration: underline; }
 
 /* ── MODAL ── */
 .modal-overlay {
