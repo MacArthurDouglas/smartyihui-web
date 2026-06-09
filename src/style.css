@@ -181,10 +181,6 @@ body.dark-theme .map-placeholder img {
   filter: brightness(0.82) saturate(0.92);
 }
 
-body.dark-theme .srv-hero-photo-bg {
-  opacity: 0.09 !important;
-}
-
 body.dark-theme .fact-card,
 body.dark-theme .tech-tag,
 body.dark-theme .srv-tags li,

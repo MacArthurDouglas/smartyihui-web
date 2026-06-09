@@ -2,9 +2,6 @@
   <div class="page-top-pad">
     <section class="srv-hero">
       <div class="srv-hero-bg" aria-hidden="true"></div>
-      <div class="srv-hero-photo-bg" aria-hidden="true">
-        <img :src="serviceReviewImage" alt="" />
-      </div>
       <div class="srv-hero-inner">
         <div class="section-tag">服务项目</div>
         <h1 class="srv-hero-title">我们能为您<span class="gold">开发什么</span></h1>
@@ -188,30 +185,6 @@ const steps = [
       transparent 8px
     );
   opacity: 0.75;
-}
-.srv-hero-photo-bg {
-  position: absolute;
-  right: 4%;
-  top: 14%;
-  width: min(420px, 34vw);
-  aspect-ratio: 16 / 10;
-  border-radius: 28px;
-  overflow: hidden;
-  opacity: 0.13;
-  transform: rotate(-2deg);
-  pointer-events: none;
-  box-shadow: 0 24px 60px rgba(13,17,23,0.16);
-}
-.srv-hero-photo-bg::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(135deg, rgba(255,255,255,0.44), rgba(255,255,255,0.06));
-}
-.srv-hero-photo-bg img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
 }
 .srv-hero-inner { max-width: 700px; margin: 0 auto; text-align: center; }
 .srv-hero-inner { position: relative; z-index: 1; }
@@ -433,13 +406,11 @@ const steps = [
   .srv-hero-inner { text-align: left; }
   .srv-hero-tags { justify-content: flex-start; }
   .srv-hero-bg { opacity: 0.5; }
-  .srv-hero-photo-bg { display: none; }
   .proc-step { backdrop-filter: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .srv-hero-bg { display: none; }
-  .srv-hero-photo-bg { display: none; }
   .srv-d-icon-bg,
   .srv-detail-inner:hover .srv-d-icon-bg,
   .btn-primary,
